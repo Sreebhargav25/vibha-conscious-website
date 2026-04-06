@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VIBHA CONSCIOUS</title>
+  <meta name="description" content="We never stopped watching.">
+  <meta name="theme-color" content="#0a0c10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Noise overlay -->
+  <canvas id="noise" aria-hidden="true"></canvas>
+
+  <!-- Scanline overlay -->
+  <div id="scanlines" aria-hidden="true"></div>
+
+  <!-- Vignette that follows cursor -->
+  <div id="vignette" aria-hidden="true"></div>
+
+  <!-- Cursor light -->
+  <div id="cursor-light" aria-hidden="true"></div>
+
+  <!-- Hidden ambient data layer -->
+  <div id="ambient-data" aria-hidden="true">
+    <span class="data-fragment frag-1">INTERCEPT_ID: 7X-4491</span>
+    <span class="data-fragment frag-2">MORPH_SHIELD: ARMED</span>
+    <span class="data-fragment frag-3">TRACE_PURGE: COMPLETE</span>
+    <span class="data-fragment frag-4">SUBJ_COUNT: ███</span>
+    <span class="data-fragment frag-5">EXPOSURE_QUEUE: LOADED</span>
+    <span class="data-fragment frag-6">12.9716° N, 77.5946° E</span>
+    <span class="data-fragment frag-7">BAIT_OP: CONCLUDED</span>
+    <span class="data-fragment frag-8">EVIDENCE_HASH: a3f8...c91d</span>
+    <span class="data-fragment frag-9">FOOTPRINT: ERASED</span>
+    <span class="data-fragment frag-10">VICTIM_SHIELD: ACTIVE</span>
+  </div>
+
+  <!-- Mouse trail reveal layer -->
+  <canvas id="reveal-canvas" aria-hidden="true"></canvas>
+
+  <!-- Main content -->
+  <main id="main">
+
+    <!-- Title block -->
+    <div id="title-block">
+      <div id="title-glitch" class="title-text" aria-hidden="true">
+        <span class="char" data-char="V">V</span><span class="char" data-char="I">I</span><span class="char" data-char="B">B</span><span class="char" data-char="H">H</span><span class="char" data-char="A">A</span>
+        <span class="title-space"> </span>
+        <span class="char" data-char="C">C</span><span class="char" data-char="O">O</span><span class="char" data-char="N">N</span><span class="char" data-char="S">S</span><span class="char" data-char="C">C</span><span class="char" data-char="I">I</span><span class="char" data-char="O">O</span><span class="char" data-char="U">U</span><span class="char" data-char="S">S</span>
+      </div>
+      <h1 id="title-main" class="title-text">
+        <span class="char" data-char="V">V</span><span class="char" data-char="I">I</span><span class="char" data-char="B">B</span><span class="char" data-char="H">H</span><span class="char" data-char="A">A</span>
+        <span class="title-space"> </span>
+        <span class="char" data-char="C">C</span><span class="char" data-char="O">O</span><span class="char" data-char="N">N</span><span class="char" data-char="S">S</span><span class="char" data-char="C">C</span><span class="char" data-char="I">I</span><span class="char" data-char="O">O</span><span class="char" data-char="U">U</span><span class="char" data-char="S">S</span>
+      </h1>
+    </div>
+
+    <!-- Signal line -->
+    <div id="signal">
+      <span id="signal-text"></span>
+      <span id="signal-cursor">_</span>
+    </div>
+
+    <!-- Terminal readout -->
+    <div id="terminal">
+      <div class="term-line" data-delay="0"><span class="term-prefix">&gt;</span> <span class="term-content">SYS_INIT... 2 years of silence</span></div>
+      <div class="term-line" data-delay="1"><span class="term-prefix">&gt;</span> <span class="term-content">SURVEILLANCE_LOG: parsing</span></div>
+      <div class="term-line" data-delay="2"><span class="term-prefix">&gt;</span> <span class="term-content">SUBJECTS_IDENTIFIED: <span class="redacted">████████</span></span></div>
+      <div class="term-line" data-delay="3"><span class="term-prefix">&gt;</span> <span class="term-content">STATUS: operational</span></div>
+    </div>
+
+    <!-- Eye motif (SVG) -->
+    <div id="eye-container" aria-hidden="true">
+      <svg id="eye-svg" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">
+        <path class="eye-outline" d="M10,30 Q60,0 110,30 Q60,60 10,30 Z" fill="none" stroke="rgba(200,40,40,0.3)" stroke-width="1"/>
+        <circle class="eye-iris" cx="60" cy="30" r="12" fill="none" stroke="rgba(200,40,40,0.4)" stroke-width="1"/>
+        <circle class="eye-pupil" cx="60" cy="30" r="4" fill="rgba(200,40,40,0.5)"/>
+      </svg>
+    </div>
+
+    <!-- Morse code corner element -->
+    <div id="morse-corner" title="..." aria-label="Hidden message">
+      <span class="morse-dot"></span>
+      <span class="morse-dot"></span>
+      <span class="morse-dot"></span>
+    </div>
+    <div id="morse-message" class="hidden" aria-hidden="true">
+      <span>...- .. -... .... .-</span>
+      <br>
+      <span class="morse-decoded">V I B H A</span>
+    </div>
+
+  </main>
+
+  <!-- Dossier overlay (easter egg) -->
+  <div id="dossier-overlay" class="hidden" aria-hidden="true">
+    <div id="dossier-content">
+      <div class="dossier-header">
+        <span class="dossier-label">CLASSIFIED // PERSONNEL FILE</span>
+        <span class="dossier-close">[ESC]</span>
+      </div>
+      <div class="dossier-grid">
+        <div class="dossier-card">
+          <div class="dossier-img-wrap">
+            <img src="assets/sreebhargav.png" alt="" class="dossier-img" loading="lazy">
+            <div class="dossier-scanline"></div>
+          </div>
+          <div class="dossier-meta">
+            <span class="dossier-codename">FOUNDER_01</span>
+            <span class="dossier-status">STATUS: ACTIVE</span>
+          </div>
+        </div>
+        <div class="dossier-card">
+          <div class="dossier-img-wrap">
+            <img src="assets/geetika.png" alt="" class="dossier-img" loading="lazy">
+            <div class="dossier-scanline"></div>
+          </div>
+          <div class="dossier-meta">
+            <span class="dossier-codename">FOUNDER_02</span>
+            <span class="dossier-status">STATUS: ACTIVE</span>
+          </div>
+        </div>
+      </div>
+      <div class="dossier-footer">CLEARANCE: EYES ONLY</div>
+    </div>
+  </div>
+
+  <!-- Konami overlay -->
+  <div id="konami-overlay" class="hidden" aria-hidden="true">
+    <div id="konami-content">
+      <div class="konami-text">YOU FOUND THE BACK DOOR.</div>
+      <div class="konami-sub">Not everyone looks this deep.<br>That's why we need people like you.</div>
+      <div class="konami-sub-2">Recruitment opens soon.</div>
+    </div>
+  </div>
+
+  <!-- Word trigger overlay -->
+  <div id="word-overlay" class="hidden" aria-hidden="true">
+    <div id="word-content"></div>
+  </div>
+
+  <!-- Custom context menu -->
+  <div id="custom-context" class="hidden">
+    <div class="ctx-item ctx-header">VIBHA_SYS v0.0.1-alpha</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item">You weren't supposed to right-click.</div>
+    <div class="ctx-item ctx-dim">But we expected you would.</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item ctx-action" id="ctx-reveal">[ REVEAL DOSSIER ]</div>
+  </div>
+
+  <!-- Footer -->
+  <footer id="footer">
+    <span class="footer-id">CASE_FILE: ACTIVE</span>
+    <span class="footer-divider">//</span>
+    <span class="footer-year">2026</span>
+    <span class="footer-divider">//</span>
+    <span class="footer-ver">v0.0.1-alpha</span>
+  </footer>
+
+  <!-- Hidden click zone for dossier (positioned over a dead zone) -->
+  <div id="dossier-trigger" aria-hidden="true"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
