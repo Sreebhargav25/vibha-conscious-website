@@ -1245,6 +1245,10 @@ body.scroll-active #scanlines {
   display: none;
 }
 
+#mobile-hint.hidden {
+  display: none !important;
+}
+
 @media (hover: none) and (pointer: coarse) {
   #mobile-hint {
     display: block;
