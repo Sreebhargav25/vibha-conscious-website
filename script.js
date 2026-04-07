@@ -951,10 +951,14 @@
 
   // --- Mobile Hint ---
   function initMobileHint() {
-    if (!state.isMobile) return;
+    // Re-evaluate at call time, not parse time, and use both checks
+    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches
+      && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+
+    if (!isTouchDevice) return;
+
     setTimeout(() => {
       mobileHint.classList.remove('hidden');
-      // Auto-hide after the flicker animation (2s)
       setTimeout(() => {
         mobileHint.classList.add('hidden');
       }, 2500);
