@@ -21,6 +21,16 @@
     scrollAccumulator: 0,
     isMobile: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
     rafId: null,
+    // New discoverable layer state
+    anomalyCount: 0,
+    scanBeamY: 0,
+    scanBeamSpeed: 0.4,
+    scanBeamDir: 1,
+    scanBeamDisrupted: false,
+    waveformExcited: false,
+    scrollFlashTimeout: null,
+    scrollGrainTimeout: null,
+    signalLevel: 0,
   };
 
   const KONAMI = [
@@ -59,6 +69,13 @@
   const ctxReveal = $('#ctx-reveal');
   const terminal = $('#terminal');
   const footer = $('#footer');
+  // New discoverable layer refs
+  const anomaly = $('#anomaly');
+  const scanBeam = $('#scan-beam');
+  const waveformCanvas = $('#waveform');
+  const scrollFlash = $('#scroll-flash');
+  const signalStrength = $('#signal-strength');
+  const mobileHint = $('#mobile-hint');
 
   // --- Noise Generator ---
   function initNoise() {
@@ -428,6 +445,9 @@
         titleBlock.style.transform = '';
       }, 100);
 
+      // Enhanced scroll feedback
+      enhancedScrollFeedback(e.deltaY);
+
       // After enough scrolling, reveal a hidden element
       if (state.scrollAccumulator > 2000 && !state.phaseTwoTriggered) {
         triggerPhaseTwo();
@@ -446,6 +466,9 @@
       const dy = Math.abs(e.touches[0].clientY - lastTouchY);
       state.scrollAccumulator += dy;
       lastTouchY = e.touches[0].clientY;
+
+      // Enhanced scroll feedback on mobile too
+      if (dy > 3) enhancedScrollFeedback(dy);
 
       if (state.scrollAccumulator > 2000 && !state.phaseTwoTriggered) {
         triggerPhaseTwo();
@@ -500,7 +523,10 @@
   }
 
   // --- Main Animation Loop ---
+  let waveformRef = null;
+
   function startLoop() {
+    let frameCount = 0;
     function loop() {
       if (!state.isMobile) {
         updateCursorLight(state.mouseX, state.mouseY);
@@ -509,6 +535,12 @@
         if (revealRef) revealRef.updateMask(state.mouseX, state.mouseY);
       }
       updateEye(state.mouseX, state.mouseY);
+      updateScanBeam();
+      // Draw waveform at ~20fps to save perf
+      if (frameCount % 3 === 0 && waveformRef) {
+        waveformRef.draw();
+      }
+      frameCount++;
       state.rafId = requestAnimationFrame(loop);
     }
     state.rafId = requestAnimationFrame(loop);
@@ -594,6 +626,355 @@
     });
   }
 
+  // ===========================================
+  // DISCOVERABLE INTERACTION LAYER
+  // ===========================================
+
+  // --- Anomaly Pulse (clickable breathing circle) ---
+  const ANOMALY_TRANSMISSIONS = [
+    'SIGNAL INTERCEPTED',
+    'LINK ESTABLISHED',
+    'NODE ACTIVE',
+    'CHANNEL OPEN',
+    'HANDSHAKE COMPLETE',
+    'PACKET RECEIVED',
+    'TRACE INITIATED',
+    'FREQUENCY LOCKED',
+  ];
+
+  function initAnomaly() {
+    function triggerAnomaly() {
+      if (anomaly.classList.contains('activated')) return;
+
+      state.anomalyCount++;
+      anomaly.classList.add('activated');
+
+      // Show a transmission message
+      const msg = ANOMALY_TRANSMISSIONS[(state.anomalyCount - 1) % ANOMALY_TRANSMISSIONS.length];
+      const tx = document.createElement('div');
+      tx.className = 'anomaly-transmission';
+      tx.textContent = msg;
+      anomaly.appendChild(tx);
+
+      // Brief screen distortion
+      document.body.style.filter = 'brightness(1.15) hue-rotate(5deg)';
+      setTimeout(() => {
+        document.body.style.filter = '';
+      }, 100);
+
+      // Reset after animation
+      setTimeout(() => {
+        anomaly.classList.remove('activated');
+        if (tx.parentNode) tx.parentNode.removeChild(tx);
+      }, 2200);
+    }
+
+    anomaly.addEventListener('click', triggerAnomaly);
+    anomaly.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      triggerAnomaly();
+    });
+  }
+
+  // --- Interactive Terminal Lines ---
+  const TERM_DECRYPTS = [
+    'we catalogued everything they did',
+    'the logs were never deleted',
+    'names. dates. screenshots. all of it.',
+    'this is not a warning. it is a promise.',
+  ];
+
+  function initInteractiveTerminal() {
+    const lines = document.querySelectorAll('.term-line[data-delay]');
+    lines.forEach((line, idx) => {
+      // Add decrypt layer
+      const decrypt = document.createElement('div');
+      decrypt.className = 'term-decrypt';
+      decrypt.textContent = '> ' + TERM_DECRYPTS[idx];
+      line.appendChild(decrypt);
+      line.style.position = 'relative';
+
+      let decryptTimeout = null;
+
+      function showDecrypt() {
+        line.classList.add('decrypting');
+        clearTimeout(decryptTimeout);
+        decryptTimeout = setTimeout(() => {
+          line.classList.remove('decrypting');
+        }, 1500);
+      }
+
+      // Desktop: hover
+      line.addEventListener('mouseenter', showDecrypt);
+      // Mobile: tap
+      line.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        line.classList.add('touched');
+        showDecrypt();
+        setTimeout(() => line.classList.remove('touched'), 300);
+      }, { passive: true });
+    });
+  }
+
+  // --- Interactive Title Characters ---
+  function initInteractiveTitle() {
+    const chars = document.querySelectorAll('#title-main .char');
+    chars.forEach((ch) => {
+      ch.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        ch.classList.add('touched');
+        // Trigger a mini glitch on touch
+        const original = ch.dataset.char;
+        const glitchChars = '!@#$%^&*_0123456789';
+        ch.textContent = glitchChars[Math.floor(Math.random() * glitchChars.length)];
+        ch.style.color = 'var(--accent-red-bright)';
+        ch.style.textShadow = '0 0 20px rgba(200,48,48,0.6)';
+        setTimeout(() => {
+          ch.textContent = original;
+          ch.style.color = '';
+          ch.style.textShadow = '';
+          ch.classList.remove('touched');
+        }, 200);
+      }, { passive: true });
+    });
+  }
+
+  // --- Scan Beam (bright line that sweeps the screen) ---
+  function initScanBeam() {
+    const h = window.innerHeight;
+    state.scanBeamY = 0;
+
+    // Click/tap on the scan beam area triggers disruption
+    document.addEventListener('click', (e) => {
+      if (state.contextOpen || state.dossierOpen || state.konamiOpen || state.wordOverlayOpen) return;
+      // Check if click is near the scan beam
+      const beamY = state.scanBeamY;
+      if (Math.abs(e.clientY - beamY) < 30) {
+        disruptScanBeam();
+      }
+    });
+  }
+
+  function disruptScanBeam() {
+    if (state.scanBeamDisrupted) return;
+    state.scanBeamDisrupted = true;
+    scanBeam.classList.add('disrupted');
+    state.scanBeamSpeed = 2.5;
+
+    setTimeout(() => {
+      state.scanBeamDisrupted = false;
+      scanBeam.classList.remove('disrupted');
+      state.scanBeamSpeed = 0.4;
+    }, 2000);
+  }
+
+  function updateScanBeam() {
+    const h = window.innerHeight;
+    state.scanBeamY += state.scanBeamSpeed * state.scanBeamDir;
+    if (state.scanBeamY > h) {
+      state.scanBeamDir = -1;
+      state.scanBeamY = h;
+    } else if (state.scanBeamY < 0) {
+      state.scanBeamDir = 1;
+      state.scanBeamY = 0;
+    }
+    scanBeam.style.transform = `translateY(${state.scanBeamY}px) translateZ(0)`;
+  }
+
+  // --- Waveform / Signal Monitor ---
+  function initWaveform() {
+    const ctx = waveformCanvas.getContext('2d');
+    let w, h;
+    let phase = 0;
+
+    function resize() {
+      const rect = waveformCanvas.getBoundingClientRect();
+      w = Math.ceil(rect.width * (window.devicePixelRatio > 1 ? 2 : 1));
+      h = Math.ceil(rect.height * (window.devicePixelRatio > 1 ? 2 : 1));
+      waveformCanvas.width = w;
+      waveformCanvas.height = h;
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.strokeStyle = state.waveformExcited
+        ? 'rgba(200, 48, 48, 0.7)'
+        : 'rgba(45, 138, 78, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+
+      const amp = state.waveformExcited ? h * 0.4 : h * 0.15;
+      const freq = state.waveformExcited ? 0.08 : 0.04;
+      const speed = state.waveformExcited ? 0.15 : 0.03;
+
+      for (let x = 0; x < w; x++) {
+        const y = h / 2 + Math.sin(x * freq + phase) * amp
+          + Math.sin(x * freq * 2.3 + phase * 1.7) * amp * 0.3;
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow line
+      if (state.waveformExcited) {
+        ctx.strokeStyle = 'rgba(200, 48, 48, 0.15)';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+      }
+
+      phase += speed;
+    }
+
+    // Click to excite
+    function excite() {
+      if (state.waveformExcited) return;
+      state.waveformExcited = true;
+
+      // Brief screen flash
+      document.body.style.filter = 'brightness(1.1)';
+      setTimeout(() => { document.body.style.filter = ''; }, 80);
+
+      setTimeout(() => {
+        state.waveformExcited = false;
+      }, 3000);
+    }
+
+    waveformCanvas.addEventListener('click', excite);
+    waveformCanvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      excite();
+    });
+
+    return { draw };
+  }
+
+  // --- Redacted Block Interaction ---
+  function initRedactedBlock() {
+    const bars = document.querySelectorAll('.redacted-bar');
+    bars.forEach((bar) => {
+      let revealTimeout = null;
+
+      function revealBriefly() {
+        bar.classList.add('briefly-revealed');
+        bar.textContent = bar.dataset.reveal;
+        clearTimeout(revealTimeout);
+        revealTimeout = setTimeout(() => {
+          bar.classList.remove('briefly-revealed');
+          // Re-censor with matching-length block chars
+          const len = bar.dataset.reveal.length;
+          bar.textContent = '█'.repeat(Math.max(len, 4));
+        }, 800);
+      }
+
+      // Desktop hover
+      bar.addEventListener('mouseenter', revealBriefly);
+      bar.addEventListener('mouseleave', () => {
+        clearTimeout(revealTimeout);
+        revealTimeout = setTimeout(() => {
+          bar.classList.remove('briefly-revealed');
+          const len = bar.dataset.reveal.length;
+          bar.textContent = '█'.repeat(Math.max(len, 4));
+        }, 200);
+      });
+
+      // Mobile tap
+      bar.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+        bar.classList.add('touched');
+        revealBriefly();
+        setTimeout(() => bar.classList.remove('touched'), 300);
+      }, { passive: true });
+    });
+  }
+
+  // --- Enhanced Scroll Interactions ---
+  const SCROLL_FLASH_TEXTS = [
+    'PARSING...',
+    'SIGNAL ACQUIRED',
+    'DEPTH: ███',
+    'SCANNING',
+    'LAYER BREACH',
+    'TRACE ACTIVE',
+    'INCOMING',
+    'DECRYPT FAIL',
+    'NODE 7 ONLINE',
+    'STAND BY',
+  ];
+  let scrollFlashIndex = 0;
+
+  function enhancedScrollFeedback(deltaY) {
+    // 1. Grain intensification
+    clearTimeout(state.scrollGrainTimeout);
+    document.body.classList.add('scroll-active');
+    state.scrollGrainTimeout = setTimeout(() => {
+      document.body.classList.remove('scroll-active');
+    }, 200);
+
+    // 2. Flash a cryptic text fragment
+    clearTimeout(state.scrollFlashTimeout);
+    scrollFlash.textContent = SCROLL_FLASH_TEXTS[scrollFlashIndex % SCROLL_FLASH_TEXTS.length];
+    scrollFlash.classList.add('visible');
+    scrollFlashIndex++;
+    state.scrollFlashTimeout = setTimeout(() => {
+      scrollFlash.classList.remove('visible');
+    }, 300);
+
+    // 3. Disrupt the scan beam slightly on scroll
+    state.scanBeamSpeed = Math.min(state.scanBeamSpeed + 0.5, 3);
+    setTimeout(() => {
+      if (!state.scanBeamDisrupted) state.scanBeamSpeed = 0.4;
+    }, 500);
+
+    // 4. Update signal strength indicator
+    updateSignalStrength();
+  }
+
+  // --- Signal Strength Indicator ---
+  function updateSignalStrength() {
+    // Compute level from scroll accumulator (0-5)
+    const maxScroll = 2000; // matches phase-two threshold
+    state.signalLevel = Math.min(5, Math.floor((state.scrollAccumulator / maxScroll) * 5));
+
+    const bars = document.querySelectorAll('.sig-bar');
+    bars.forEach((bar) => {
+      const barIdx = parseInt(bar.dataset.bar);
+      if (barIdx < state.signalLevel) {
+        bar.classList.add('active');
+        bar.classList.toggle('danger', state.signalLevel >= 5);
+      } else {
+        bar.classList.remove('active', 'danger');
+      }
+    });
+  }
+
+  // --- Mobile Hint ---
+  function initMobileHint() {
+    if (!state.isMobile) return;
+    setTimeout(() => {
+      mobileHint.classList.remove('hidden');
+      // Auto-hide after the flicker animation (2s)
+      setTimeout(() => {
+        mobileHint.classList.add('hidden');
+      }, 2500);
+    }, 6000);
+
+    // Also pulse the anomaly on mobile after 7s
+    setTimeout(() => {
+      if (!anomaly) return;
+      anomaly.style.transform = 'scale(1.5)';
+      anomaly.style.transition = 'transform 0.4s ease';
+      setTimeout(() => {
+        anomaly.style.transform = '';
+        setTimeout(() => {
+          anomaly.style.transition = '';
+        }, 400);
+      }, 600);
+    }, 8000);
+  }
+
   // --- Initialize Everything ---
   function init() {
     // Mark loaded after a short delay for the entrance sequence
@@ -617,6 +998,14 @@
     initAmbientGlitch();
     initMobileDossierTrigger();
     initDoubleTap();
+    // Discoverable layer
+    initAnomaly();
+    initInteractiveTerminal();
+    initInteractiveTitle();
+    initScanBeam();
+    waveformRef = initWaveform();
+    initRedactedBlock();
+    initMobileHint();
     startLoop();
   }
 

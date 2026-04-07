@@ -41,6 +41,32 @@
   <!-- Mouse trail reveal layer -->
   <canvas id="reveal-canvas" aria-hidden="true"></canvas>
 
+  <!-- Scroll flash text -->
+  <div id="scroll-flash" aria-hidden="true"></div>
+
+  <!-- Signal strength indicator (scroll-driven) -->
+  <div id="signal-strength" aria-hidden="true">
+    <div class="sig-label">SIG</div>
+    <div class="sig-bars">
+      <div class="sig-bar" data-bar="0"></div>
+      <div class="sig-bar" data-bar="1"></div>
+      <div class="sig-bar" data-bar="2"></div>
+      <div class="sig-bar" data-bar="3"></div>
+      <div class="sig-bar" data-bar="4"></div>
+    </div>
+  </div>
+
+  <!-- Bright scan beam (moving element) -->
+  <div id="scan-beam" aria-hidden="true"></div>
+
+  <!-- Waveform / signal monitor -->
+  <canvas id="waveform" aria-hidden="true"></canvas>
+
+  <!-- Mobile hint -->
+  <div id="mobile-hint" class="hidden" aria-hidden="true">
+    <span>touch to disturb the signal</span>
+  </div>
+
   <!-- Main content -->
   <main id="main">
 
@@ -70,6 +96,19 @@
       <div class="term-line" data-delay="1"><span class="term-prefix">&gt;</span> <span class="term-content">SURVEILLANCE_LOG: parsing</span></div>
       <div class="term-line" data-delay="2"><span class="term-prefix">&gt;</span> <span class="term-content">SUBJECTS_IDENTIFIED: <span class="redacted">████████</span></span></div>
       <div class="term-line" data-delay="3"><span class="term-prefix">&gt;</span> <span class="term-content">STATUS: operational</span></div>
+    </div>
+
+    <!-- Anomaly pulse (clickable breathing circle) -->
+    <div id="anomaly" aria-hidden="true">
+      <div id="anomaly-ring"></div>
+      <div id="anomaly-core"></div>
+    </div>
+
+    <!-- Redacted document block -->
+    <div id="redacted-block" aria-hidden="true">
+      <div class="redacted-line"><span class="redacted-visible">OPERATION</span> <span class="redacted-bar" data-reveal="NIGHTFALL">████████</span> <span class="redacted-visible">—</span> <span class="redacted-bar" data-reveal="PHASE 3">███████</span></div>
+      <div class="redacted-line"><span class="redacted-bar" data-reveal="14 SUBJECTS">██████████████</span> <span class="redacted-visible">flagged for</span> <span class="redacted-bar" data-reveal="EXPOSURE">████████</span></div>
+      <div class="redacted-line"><span class="redacted-visible">evidence:</span> <span class="redacted-bar" data-reveal="VERIFIED">████████</span> <span class="redacted-visible">//</span> <span class="redacted-bar" data-reveal="SEALED">██████</span></div>
     </div>
 
     <!-- Eye motif (SVG) -->
@@ -159,6 +198,8 @@
     <span class="footer-year">2026</span>
     <span class="footer-divider">//</span>
     <span class="footer-ver">v0.0.1-alpha</span>
+    <span class="footer-divider">//</span>
+    <a href="https://instagram.com/vibhaconscious" target="_blank" rel="noopener noreferrer" class="footer-link">@vibhaconscious</a>
   </footer>
 
   <!-- Hidden click zone for dossier (positioned over a dead zone) -->
