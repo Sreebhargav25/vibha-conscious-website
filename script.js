@@ -19,7 +19,7 @@
     contextOpen: false,
     phaseTwoTriggered: false,
     scrollAccumulator: 0,
-    isMobile: 'ontouchstart' in window || navigator.maxTouchPoints > 0,
+    isMobile: window.matchMedia('(hover: none) and (pointer: coarse)').matches,
     rafId: null,
     // New discoverable layer state
     anomalyCount: 0,
@@ -504,22 +504,22 @@
   function initTracking() {
     revealRef = initRevealCanvas();
 
-    if (!state.isMobile) {
-      document.addEventListener('mousemove', (e) => {
-        state.mouseX = e.clientX;
-        state.mouseY = e.clientY;
-      });
-    } else {
-      document.addEventListener('touchmove', (e) => {
-        state.mouseX = e.touches[0].clientX;
-        state.mouseY = e.touches[0].clientY;
-      }, { passive: true });
+    // Always register both — on desktop, touch events simply won't fire;
+    // on mobile, mousemove won't fire. Hybrid devices get both.
+    document.addEventListener('mousemove', (e) => {
+      state.mouseX = e.clientX;
+      state.mouseY = e.clientY;
+    });
 
-      document.addEventListener('touchstart', (e) => {
-        state.mouseX = e.touches[0].clientX;
-        state.mouseY = e.touches[0].clientY;
-      }, { passive: true });
-    }
+    document.addEventListener('touchmove', (e) => {
+      state.mouseX = e.touches[0].clientX;
+      state.mouseY = e.touches[0].clientY;
+    }, { passive: true });
+
+    document.addEventListener('touchstart', (e) => {
+      state.mouseX = e.touches[0].clientX;
+      state.mouseY = e.touches[0].clientY;
+    }, { passive: true });
   }
 
   // --- Main Animation Loop ---
@@ -528,12 +528,12 @@
   function startLoop() {
     let frameCount = 0;
     function loop() {
-      if (!state.isMobile) {
-        updateCursorLight(state.mouseX, state.mouseY);
-        updateVignette(state.mouseX, state.mouseY);
-        updateFragmentProximity(state.mouseX, state.mouseY);
-        if (revealRef) revealRef.updateMask(state.mouseX, state.mouseY);
-      }
+      // These effects are useful on all platforms — cursor light and
+      // reveal canvas are hidden via CSS on hover:none devices anyway.
+      updateCursorLight(state.mouseX, state.mouseY);
+      updateVignette(state.mouseX, state.mouseY);
+      updateFragmentProximity(state.mouseX, state.mouseY);
+      if (revealRef) revealRef.updateMask(state.mouseX, state.mouseY);
       updateEye(state.mouseX, state.mouseY);
       updateScanBeam();
       // Draw waveform at ~20fps to save perf
