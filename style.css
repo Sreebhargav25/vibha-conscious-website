@@ -1245,7 +1245,12 @@ body.scroll-active #scanlines {
   display: none;
 }
 
+#mobile-hint.hidden {
+  display: none !important;
+}
+
 #mobile-hint:not(.hidden) {
+  display: block !important;
   opacity: 0.6;
 }
 
