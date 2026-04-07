@@ -5,6 +5,9 @@
 (function () {
   'use strict';
 
+  // --- Platform detection ---
+  const mobileQuery = window.matchMedia('(hover: none) and (pointer: coarse)');
+
   // --- State ---
   const state = {
     loaded: false,
@@ -19,7 +22,7 @@
     contextOpen: false,
     phaseTwoTriggered: false,
     scrollAccumulator: 0,
-    isMobile: window.matchMedia('(hover: none) and (pointer: coarse)').matches,
+    isMobile: mobileQuery.matches,
     rafId: null,
     // New discoverable layer state
     anomalyCount: 0,
@@ -313,39 +316,37 @@
       }
     });
 
-    // Mobile: tap pattern (corners: TL, TL, TR, TR, BL, BR, BL, BR, center, center)
-    if (state.isMobile) {
-      let tapSequence = [];
-      const getZone = (x, y) => {
-        const w = window.innerWidth;
-        const h = window.innerHeight;
-        const third = w / 3;
-        const vThird = h / 3;
-        if (x < third && y < vThird) return 'TL';
-        if (x > 2 * third && y < vThird) return 'TR';
-        if (x < third && y > 2 * vThird) return 'BL';
-        if (x > 2 * third && y > 2 * vThird) return 'BR';
-        return 'C';
-      };
+    // Touch tap pattern — always register, harmless on non-touch devices
+    let tapSequence = [];
+    const getZone = (x, y) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const third = w / 3;
+      const vThird = h / 3;
+      if (x < third && y < vThird) return 'TL';
+      if (x > 2 * third && y < vThird) return 'TR';
+      if (x < third && y > 2 * vThird) return 'BL';
+      if (x > 2 * third && y > 2 * vThird) return 'BR';
+      return 'C';
+    };
 
-      const mobileKonami = ['TL', 'TL', 'TR', 'TR', 'BL', 'BR', 'BL', 'BR', 'C', 'C'];
+    const mobileKonami = ['TL', 'TL', 'TR', 'TR', 'BL', 'BR', 'BL', 'BR', 'C', 'C'];
 
-      document.addEventListener('touchstart', (e) => {
-        if (state.dossierOpen || state.konamiOpen || state.wordOverlayOpen) return;
-        const touch = e.touches[0];
-        const zone = getZone(touch.clientX, touch.clientY);
-        tapSequence.push(zone);
-        if (tapSequence.length > 10) tapSequence = tapSequence.slice(-10);
+    document.addEventListener('touchstart', (e) => {
+      if (state.dossierOpen || state.konamiOpen || state.wordOverlayOpen) return;
+      const touch = e.touches[0];
+      const zone = getZone(touch.clientX, touch.clientY);
+      tapSequence.push(zone);
+      if (tapSequence.length > 10) tapSequence = tapSequence.slice(-10);
 
-        if (tapSequence.length >= 10) {
-          const last10 = tapSequence.slice(-10);
-          if (last10.every((z, i) => z === mobileKonami[i])) {
-            tapSequence = [];
-            openKonami();
-          }
+      if (tapSequence.length >= 10) {
+        const last10 = tapSequence.slice(-10);
+        if (last10.every((z, i) => z === mobileKonami[i])) {
+          tapSequence = [];
+          openKonami();
         }
-      });
-    }
+      }
+    });
   }
 
   // --- Word Triggers ---
@@ -586,10 +587,9 @@
     setTimeout(scheduleGlitch, 4000);
   }
 
-  // --- Mobile Long-Press for Dossier ---
+  // --- Long-Press for Dossier (touch devices) ---
   function initMobileDossierTrigger() {
-    if (!state.isMobile) return;
-
+    // Always register — on non-touch devices these events simply never fire
     let pressTimer = null;
     const titleBlock = $('#title-block');
 
@@ -608,10 +608,9 @@
     });
   }
 
-  // --- Double-tap easter egg for mobile ---
+  // --- Double-tap easter egg (touch devices) ---
   function initDoubleTap() {
-    if (!state.isMobile) return;
-
+    // Always register — harmless on non-touch devices
     let lastTap = 0;
     const eyeContainer = $('#eye-container');
 
@@ -985,6 +984,11 @@
 
     // Start typing the signal line after title reveals
     setTimeout(typeSignal, 2800);
+
+    // Keep isMobile in sync if device capabilities change (e.g. tablet keyboard attached)
+    mobileQuery.addEventListener('change', (e) => {
+      state.isMobile = e.matches;
+    });
 
     initNoise();
     initTracking();

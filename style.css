@@ -1350,7 +1350,7 @@ body.scroll-active #scanlines {
 }
 
 /* --- Mobile touch indicator --- */
-@media (hover: none) {
+@media (hover: none) and (pointer: coarse) {
   body {
     cursor: default;
   }
