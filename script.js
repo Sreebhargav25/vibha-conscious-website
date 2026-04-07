@@ -951,27 +951,34 @@
 
   // --- Mobile Hint ---
   function initMobileHint() {
-    let confirmed = false;
+    let mouseDetected = false;
+    let hintShown = false;
 
-    function onFirstTouch() {
-      if (confirmed) return;
-      confirmed = true;
-      document.removeEventListener('touchstart', onFirstTouch);
-
-      // A real touch event fired — this is genuinely a touch device
-      setTimeout(() => {
-        mobileHint.style.display = 'block';
-        mobileHint.classList.remove('hidden');
-        setTimeout(() => {
-          mobileHint.classList.add('hidden');
-          setTimeout(() => {
-            mobileHint.style.display = 'none';
-          }, 1600);
-        }, 2500);
-      }, 3000);
+    // If a real mousemove fires, this is definitively a pointer device.
+    // We only need one event to confirm — then we're done forever.
+    function onMouseMove() {
+      mouseDetected = true;
+      document.removeEventListener('mousemove', onMouseMove);
     }
+    document.addEventListener('mousemove', onMouseMove);
 
-    document.addEventListener('touchstart', onFirstTouch, { passive: true });
+    // Wait 6 seconds, then show hint ONLY if no mouse was ever detected
+    setTimeout(() => {
+      if (mouseDetected || hintShown) return;
+      hintShown = true;
+
+      // Show it
+      mobileHint.style.display = 'block';
+      mobileHint.classList.remove('hidden');
+
+      // Hide after 2.5s
+      setTimeout(() => {
+        mobileHint.classList.add('hidden');
+        setTimeout(() => {
+          mobileHint.style.display = 'none';
+        }, 1600);
+      }, 2500);
+    }, 6000);
   }
 
   // --- Initialize Everything ---
