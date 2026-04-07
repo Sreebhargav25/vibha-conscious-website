@@ -951,31 +951,27 @@
 
   // --- Mobile Hint ---
   function initMobileHint() {
-    // Re-evaluate at call time, not parse time, and use both checks
-    const isTouchDevice = window.matchMedia('(hover: none) and (pointer: coarse)').matches
-      && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+    let confirmed = false;
 
-    if (!isTouchDevice) return;
+    function onFirstTouch() {
+      if (confirmed) return;
+      confirmed = true;
+      document.removeEventListener('touchstart', onFirstTouch);
 
-    setTimeout(() => {
-      mobileHint.classList.remove('hidden');
+      // A real touch event fired — this is genuinely a touch device
       setTimeout(() => {
-        mobileHint.classList.add('hidden');
-      }, 2500);
-    }, 6000);
-
-    // Also pulse the anomaly on mobile after 7s
-    setTimeout(() => {
-      if (!anomaly) return;
-      anomaly.style.transform = 'scale(1.5)';
-      anomaly.style.transition = 'transform 0.4s ease';
-      setTimeout(() => {
-        anomaly.style.transform = '';
+        mobileHint.style.display = 'block';
+        mobileHint.classList.remove('hidden');
         setTimeout(() => {
-          anomaly.style.transition = '';
-        }, 400);
-      }, 600);
-    }, 8000);
+          mobileHint.classList.add('hidden');
+          setTimeout(() => {
+            mobileHint.style.display = 'none';
+          }, 1600);
+        }, 2500);
+      }, 3000);
+    }
+
+    document.addEventListener('touchstart', onFirstTouch, { passive: true });
   }
 
   // --- Initialize Everything ---
